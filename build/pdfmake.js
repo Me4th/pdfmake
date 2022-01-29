@@ -14350,7 +14350,7 @@ module.exports = /*#__PURE__*/function () {
 
 /***/ }),
 
-/***/ 2249:
+/***/ 1765:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -55499,7 +55499,7 @@ module.exports = __webpack_require__(7187).EventEmitter;
 
 /***/ }),
 
-/***/ 3804:
+/***/ 6044:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
@@ -72644,7 +72644,7 @@ module.exports = URLBrowserResolver;
 var isFunction = (__webpack_require__(6225).isFunction);
 var isUndefined = (__webpack_require__(6225).isUndefined);
 var isNull = (__webpack_require__(6225).isNull);
-var FileSaver = __webpack_require__(3804);
+var FileSaver = __webpack_require__(6044);
 var saveAs = FileSaver.saveAs;
 
 var defaultClientFonts = {
@@ -74871,7 +74871,7 @@ module.exports = ElementWriter;
 
 /***/ }),
 
-/***/ 8089:
+/***/ 2249:
 /***/ (function(module, __unused_webpack_exports, __webpack_require__) {
 
 "use strict";
@@ -75228,7 +75228,9 @@ LayoutBuilder.prototype.layoutDocument = function (docStructure, fontProvider, s
 				}
 			});
 			nodeInfo.startPosition = node.positions[0];
-			nodeInfo.pageNumbers = Array.from(new Set(node.positions.map(function (node) { return node.pageNumber; })));
+			nodeInfo.pageNumbers = Array.from(new Set(node.positions.map(function (node) {
+				return node.pageNumber;
+			})));
 			nodeInfo.pages = pages.length;
 			nodeInfo.stack = isArray(node.stack);
 
@@ -75310,7 +75312,10 @@ LayoutBuilder.prototype.tryLayoutDocument = function (docStructure, fontProvider
 		this.addWatermark(watermark, fontProvider, defaultStyle);
 	}
 
-	return { pages: this.writer.context().pages, linearNodeList: this.linearNodeList };
+	return {
+		pages: this.writer.context().pages,
+		linearNodeList: this.linearNodeList
+	};
 };
 
 
@@ -75348,7 +75353,11 @@ LayoutBuilder.prototype.addDynamicRepeatable = function (nodeGetter, sizeFunctio
 		var node = nodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
 
 		if (node) {
-			var sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, this.pageMargins);
+			var currentMargins = this.pageMargins.slice();
+			if (node.height) {
+				currentMargins[3] = node.height;
+			}
+			var sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, currentMargins);
 			this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
 			node = this.docPreprocessor.preprocessDocument(node);
 			this.processNode(this.docMeasure.measureDocument(node));
@@ -75391,7 +75400,9 @@ LayoutBuilder.prototype.addHeadersAndFooters = function (header, footer) {
 
 LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaultStyle) {
 	if (isString(watermark)) {
-		watermark = { 'text': watermark };
+		watermark = {
+			'text': watermark
+		};
 	}
 
 	if (!watermark.text) { // empty watermark text
@@ -75432,7 +75443,11 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 
 	function getWatermarkSize(watermark, fontProvider) {
 		var textTools = new TextTools(fontProvider);
-		var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
+		var styleContextStack = new StyleContextStack(null, {
+			font: watermark.font,
+			bold: watermark.bold,
+			italics: watermark.italics
+		});
 
 		styleContextStack.push({
 			fontSize: watermark.fontSize
@@ -75441,12 +75456,19 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 		var size = textTools.sizeOfString(watermark.text, styleContextStack);
 		var rotatedSize = textTools.sizeOfRotatedText(watermark.text, watermark.angle, styleContextStack);
 
-		return { size: size, rotatedSize: rotatedSize };
+		return {
+			size: size,
+			rotatedSize: rotatedSize
+		};
 	}
 
 	function getWatermarkFontSize(pageSize, watermark, fontProvider) {
 		var textTools = new TextTools(fontProvider);
-		var styleContextStack = new StyleContextStack(null, { font: watermark.font, bold: watermark.bold, italics: watermark.italics });
+		var styleContextStack = new StyleContextStack(null, {
+			font: watermark.font,
+			bold: watermark.bold,
+			italics: watermark.italics
+		});
 		var rotatedSize;
 
 		/**
@@ -75484,12 +75506,18 @@ LayoutBuilder.prototype.addWatermark = function (watermark, fontProvider, defaul
 };
 
 function decorateNode(node) {
-	var x = node.x, y = node.y;
+	var x = node.x,
+		y = node.y;
 	node.positions = [];
 
 	if (isArray(node.canvas)) {
 		node.canvas.forEach(function (vector) {
-			var x = vector.x, y = vector.y, x1 = vector.x1, y1 = vector.y1, x2 = vector.x2, y2 = vector.y2;
+			var x = vector.x,
+				y = vector.y,
+				x1 = vector.x1,
+				y1 = vector.y1,
+				x2 = vector.x2,
+				y2 = vector.y2;
 			vector.resetXY = function () {
 				vector.x = x;
 				vector.y = y;
@@ -75660,7 +75688,8 @@ LayoutBuilder.prototype.processColumns = function (columnNode) {
 
 LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody, tableRow, height) {
 	var self = this;
-	var pageBreaks = [], positions = [];
+	var pageBreaks = [],
+		positions = [];
 
 	this.tracker.auto('pageChanged', storePageBreakData, function () {
 		widths = widths || columns;
@@ -75691,7 +75720,10 @@ LayoutBuilder.prototype.processRow = function (columns, widths, gaps, tableBody,
 		self.writer.context().completeColumnGroup(height);
 	});
 
-	return { pageBreaks: pageBreaks, positions: positions };
+	return {
+		pageBreaks: pageBreaks,
+		positions: positions
+	};
 
 	function storePageBreakData(data) {
 		var pageDesc;
@@ -76247,7 +76279,7 @@ function _interopDefault(ex) {
 	return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex;
 }
 
-var PdfKit = _interopDefault(__webpack_require__(2249));
+var PdfKit = _interopDefault(__webpack_require__(1765));
 
 function getEngineInstance() {
 	return PdfKit;
@@ -76274,7 +76306,7 @@ module.exports = {
 
 
 var PdfKitEngine = __webpack_require__(6079);
-var FontProvider = __webpack_require__(8089);
+var FontProvider = __webpack_require__(2249);
 var LayoutBuilder = __webpack_require__(2678);
 var sizes = __webpack_require__(4762);
 var ImageMeasure = __webpack_require__(3090);
