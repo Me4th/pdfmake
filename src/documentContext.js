@@ -280,6 +280,7 @@ DocumentContext.prototype.getCurrentPosition = function () {
 	var innerWidth = pageSize.width - this.pageMargins.left - this.pageMargins.right;
 
 	return {
+		pages: this.pages,
 		pageNumber: this.page + 1,
 		pageOrientation: pageSize.orientation,
 		pageInnerHeight: innerHeight,
