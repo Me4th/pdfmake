@@ -1,5 +1,9 @@
-import { isString } from './helpers/variableType';
-import { EventEmitter } from 'events';
+import {
+	isString
+} from './helpers/variableType';
+import {
+	EventEmitter
+} from 'events';
 
 /**
  * A store for current x, y positions and available width/height.
@@ -54,7 +58,7 @@ class DocumentContext extends EventEmitter {
 		this.page = saved.page;
 		this.x = this.x + this.lastColumnWidth + (offset || 0);
 		this.y = saved.y;
-		this.availableWidth = width;	//saved.availableWidth - offset;
+		this.availableWidth = width; //saved.availableWidth - offset;
 		this.availableHeight = saved.availableHeight;
 
 		this.lastColumnWidth = width;
@@ -218,7 +222,10 @@ class DocumentContext extends EventEmitter {
 	}
 
 	addPage(pageSize) {
-		let page = { items: [], pageSize: pageSize };
+		let page = {
+			items: [],
+			pageSize: pageSize
+		};
 		this.pages.push(page);
 		this.backgroundLength.push(0);
 		this.page = this.pages.length - 1;
@@ -243,6 +250,7 @@ class DocumentContext extends EventEmitter {
 		let innerWidth = pageSize.width - this.pageMargins.left - this.pageMargins.right;
 
 		return {
+			pages: this.pages,
 			pageNumber: this.page + 1,
 			pageOrientation: pageSize.orientation,
 			pageInnerHeight: innerHeight,
