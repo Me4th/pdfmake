@@ -1,4 +1,4 @@
-/*! pdfmake v0.3.0-beta.2, @license MIT, @link http://pdfmake.org */
+/*! pdfmake v0.3.0-beta.1, @license MIT, @link http://pdfmake.org */
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
@@ -2088,7 +2088,7 @@ var web_dom_collections_for_each = __webpack_require__(4747);
 // EXTERNAL MODULE: ./node_modules/core-js/modules/es.regexp.to-string.js
 var es_regexp_to_string = __webpack_require__(9714);
 // EXTERNAL MODULE: ./node_modules/@foliojs-fork/pdfkit/js/pdfkit.es5.js
-var pdfkit_es5 = __webpack_require__(9292);
+var pdfkit_es5 = __webpack_require__(5085);
 ;// CONCATENATED MODULE: ./src/PDFDocument.js
 /* provided dependency */ var Buffer = __webpack_require__(710)["Buffer"];
 
@@ -5349,6 +5349,8 @@ var DocumentContext = /*#__PURE__*/function (_EventEmitter) {
     _this.endingCell = null;
     _this.backgroundLength = [];
 
+    // console.log(_this.pageMargins, _this, this);
+
     _this.addPage(pageSize);
 
     return _this;
@@ -5450,6 +5452,14 @@ var DocumentContext = /*#__PURE__*/function (_EventEmitter) {
   _proto.addMargin = function addMargin(left, right) {
     this.x += left;
     this.availableWidth -= left + (right || 0);
+  };
+
+  _proto.addMarginBottomToPage = function addMarginBottomToPage(value) {
+    this.pageMargins.bottom = value;
+  };
+
+  _proto.changeAvailableHeight = function changeAvailableHeight(value) {
+    this.availableHeight = value;
   };
 
   _proto.moveDown = function moveDown(offset) {
@@ -5673,13 +5683,43 @@ var ElementWriter = /*#__PURE__*/function (_EventEmitter) {
     return this._context;
   };
 
-  _proto.addLine = function addLine(line, dontUpdateContextPosition, index) {
+  var lineAddIndex = 0;
+  var lineAddPage = 0;
+  var lineNewPage = true;
+  var lastPageNumber = 'first';
+  var firstrun = true;
+
+  _proto.addLine = function addLine(line, dontUpdateContextPosition, index, type) {
     var height = line.getHeight();
     var context = this.context();
     var page = context.getCurrentPage();
     var position = this.getCurrentPositionOnPage();
+    // Michael Amting
 
-    if (context.availableHeight < height || !page) {
+    if(position.pageNumber == lastPageNumber || lastPageNumber == 'first') {
+      line.inlines.forEach((inline) => {
+        if(inline.sup) {
+          context.availableHeight = context.availableHeight - 17.5;
+        }
+      });
+    } else {
+      if(type == 'footnote') {
+        line.inlines.forEach((inline) => {
+          if(inline.sup) {
+            context.availableHeight = context.availableHeight + 250;
+          }
+        });
+      }
+    }
+    lastPageNumber = position.pageNumber;
+
+    // console.log(lineAddPage, lineNewPage, context.availableHeight, height);
+
+    lineNewPage = false
+    lineAddIndex++;
+    if (context.availableHeight - 10 < height || !page) {
+      lineAddPage++;
+      lineNewPage = true;
       return false;
     }
 
@@ -6006,7 +6046,7 @@ var ElementWriter = /*#__PURE__*/function (_EventEmitter) {
       height = this.context().getCurrentPage().height - this.context().pageMargins.top - this.context().pageMargins.bottom;
       contextOrWidth = this.context().availableWidth;
     }
-
+    
     if (isNumber(contextOrWidth)) {
       contextOrWidth = new src_DocumentContext({
         width: contextOrWidth,
@@ -6066,7 +6106,6 @@ var PageElementWriter = /*#__PURE__*/function (_ElementWriter) {
 
   function PageElementWriter(context) {
     var _this;
-
     _this = _ElementWriter.call(this, context) || this;
     _this.transactionLevel = 0;
     _this.repeatables = [];
@@ -6075,11 +6114,11 @@ var PageElementWriter = /*#__PURE__*/function (_ElementWriter) {
 
   var _proto = PageElementWriter.prototype;
 
-  _proto.addLine = function addLine(line, dontUpdateContextPosition, index) {
+  _proto.addLine = function addLine(line, dontUpdateContextPosition, index, type) {
     var _this2 = this;
 
     return this._fitOnPage(function () {
-      return _ElementWriter.prototype.addLine.call(_this2, line, dontUpdateContextPosition, index);
+      return _ElementWriter.prototype.addLine.call(_this2, line, dontUpdateContextPosition, index, type);
     });
   };
 
@@ -6231,7 +6270,6 @@ var PageElementWriter = /*#__PURE__*/function (_ElementWriter) {
 
   _proto._fitOnPage = function _fitOnPage(addFct) {
     var position = addFct();
-
     if (!position) {
       this.moveToNextPage();
       position = addFct();
@@ -7193,6 +7231,8 @@ var LayoutBuilder = /*#__PURE__*/function () {
   _proto.addDynamicRepeatable = function addDynamicRepeatable(nodeGetter, sizeFunction) {
     var pages = this.writer.context().pages;
 
+    //console.log(this.writer.context());
+
     for (var pageIndex = 0, l = pages.length; pageIndex < l; pageIndex++) {
       this.writer.context().page = pageIndex;
       var node = nodeGetter(pageIndex + 1, l, this.writer.context().pages[pageIndex].pageSize);
@@ -7203,7 +7243,7 @@ var LayoutBuilder = /*#__PURE__*/function () {
         if (node.height) {
           currentMargins.bottom = node.height;
         }
-
+        
         var sizes = sizeFunction(this.writer.context().getCurrentPage().pageSize, currentMargins);
         this.writer.beginUnbreakableBlock(sizes.width, sizes.height);
         node = this.docPreprocessor.preprocessDocument(node);
@@ -7354,7 +7394,7 @@ var LayoutBuilder = /*#__PURE__*/function () {
     }
   };
 
-  _proto.processNode = function processNode(node) {
+  _proto.processNode = function processNode(node, nodeHeight) {
     var _this2 = this;
 
     var applyMargins = function applyMargins(callback) {
@@ -7613,6 +7653,7 @@ var LayoutBuilder = /*#__PURE__*/function () {
           markerLine.x = -marker._minWidth;
           markerLine.y = line.getAscenderHeight() - markerLine.getAscenderHeight();
 
+          console.log(node);
           _this4.writer.addLine(markerLine, true);
         }
       }
@@ -7704,7 +7745,7 @@ var LayoutBuilder = /*#__PURE__*/function () {
     }
 
     while (line && (maxHeight === -1 || currentHeight < maxHeight)) {
-      var positions = this.writer.addLine(line);
+      var positions = this.writer.addLine(line, undefined, undefined, node.cusType);
       node.positions.push(positions);
       line = this.buildNextLine(node);
 
@@ -8876,20 +8917,6 @@ var PdfPrinter = /*#__PURE__*/function () {
   _proto.resolveUrls = function resolveUrls(docDefinition) {
     var _this2 = this;
 
-    var getExtendedUrl = function getExtendedUrl(url) {
-      if (typeof url === 'object') {
-        return {
-          url: url.url,
-          headers: url.headers
-        };
-      }
-
-      return {
-        url: url,
-        headers: {}
-      };
-    };
-
     return new Promise(function (resolve, reject) {
       if (_this2.urlResolver === null) {
         resolve();
@@ -8898,35 +8925,19 @@ var PdfPrinter = /*#__PURE__*/function () {
       for (var font in _this2.fontDescriptors) {
         if (_this2.fontDescriptors.hasOwnProperty(font)) {
           if (_this2.fontDescriptors[font].normal) {
-            var url = getExtendedUrl(_this2.fontDescriptors[font].normal);
-
-            _this2.urlResolver.resolve(url.url, url.headers);
-
-            _this2.fontDescriptors[font].normal = url.url;
+            _this2.urlResolver.resolve(_this2.fontDescriptors[font].normal);
           }
 
           if (_this2.fontDescriptors[font].bold) {
-            var _url = getExtendedUrl(_this2.fontDescriptors[font].bold);
-
-            _this2.urlResolver.resolve(_url.url, _url.headers);
-
-            _this2.fontDescriptors[font].bold = _url.url;
+            _this2.urlResolver.resolve(_this2.fontDescriptors[font].bold);
           }
 
           if (_this2.fontDescriptors[font].italics) {
-            var _url2 = getExtendedUrl(_this2.fontDescriptors[font].italics);
-
-            _this2.urlResolver.resolve(_url2.url, _url2.headers);
-
-            _this2.fontDescriptors[font].italics = _url2.url;
+            _this2.urlResolver.resolve(_this2.fontDescriptors[font].italics);
           }
 
           if (_this2.fontDescriptors[font].bolditalics) {
-            var _url3 = getExtendedUrl(_this2.fontDescriptors[font].bolditalics);
-
-            _this2.urlResolver.resolve(_url3.url, _url3.headers);
-
-            _this2.fontDescriptors[font].bolditalics = _url3.url;
+            _this2.urlResolver.resolve(_this2.fontDescriptors[font].bolditalics);
           }
         }
       }
@@ -8934,11 +8945,7 @@ var PdfPrinter = /*#__PURE__*/function () {
       if (docDefinition.images) {
         for (var image in docDefinition.images) {
           if (docDefinition.images.hasOwnProperty(image)) {
-            var _url4 = getExtendedUrl(docDefinition.images[image]);
-
-            _this2.urlResolver.resolve(_url4.url, _url4.headers);
-
-            docDefinition.images[image] = _url4.url;
+            _this2.urlResolver.resolve(docDefinition.images[image]);
           }
         }
       }
@@ -8946,11 +8953,7 @@ var PdfPrinter = /*#__PURE__*/function () {
       if (docDefinition.attachments) {
         for (var attachment in docDefinition.attachments) {
           if (docDefinition.attachments.hasOwnProperty(attachment) && docDefinition.attachments[attachment].src) {
-            var _url5 = getExtendedUrl(docDefinition.attachments[attachment].src);
-
-            _this2.urlResolver.resolve(_url5.url, _url5.headers);
-
-            docDefinition.attachments[attachment].src = _url5.url;
+            _this2.urlResolver.resolve(docDefinition.attachments[attachment].src);
           }
         }
       }
@@ -8958,11 +8961,7 @@ var PdfPrinter = /*#__PURE__*/function () {
       if (docDefinition.files) {
         for (var file in docDefinition.files) {
           if (docDefinition.files.hasOwnProperty(file) && docDefinition.files[file].src) {
-            var _url6 = getExtendedUrl(docDefinition.files[file].src);
-
-            _this2.urlResolver.resolve(_url6.url, _url6.headers);
-
-            docDefinition.files[file].src = _url6.url;
+            _this2.urlResolver.resolve(docDefinition.files[file].src);
           }
         }
       }
@@ -9235,7 +9234,7 @@ var OutputDocument = /*#__PURE__*/function () {
 
 /* harmony default export */ var src_OutputDocument = (OutputDocument);
 // EXTERNAL MODULE: ./node_modules/file-saver/dist/FileSaver.min.js
-var FileSaver_min = __webpack_require__(1374);
+var FileSaver_min = __webpack_require__(4118);
 ;// CONCATENATED MODULE: ./src/browser-extensions/OutputDocumentBrowser.js
 
 
@@ -9410,19 +9409,10 @@ var es_object_values = __webpack_require__(2479);
 
 
 
-var fetchUrl = function fetchUrl(url, headers) {
-  if (headers === void 0) {
-    headers = {};
-  }
-
+var fetchUrl = function fetchUrl(url) {
   return new Promise(function (resolve, reject) {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
-
-    for (var headerName in headers) {
-      xhr.setRequestHeader(headerName, headers[headerName]);
-    }
-
     xhr.responseType = 'arraybuffer';
 
     xhr.onreadystatechange = function () {
@@ -9471,17 +9461,13 @@ var URLBrowserResolver = /*#__PURE__*/function () {
 
   var _proto = URLBrowserResolver.prototype;
 
-  _proto.resolve = function resolve(url, headers) {
+  _proto.resolve = function resolve(url) {
     var _this = this;
-
-    if (headers === void 0) {
-      headers = {};
-    }
 
     if (!this.resolving[url]) {
       this.resolving[url] = new Promise(function (resolve, reject) {
         if (url.toLowerCase().indexOf('https://') === 0 || url.toLowerCase().indexOf('http://') === 0) {
-          fetchUrl(url, headers).then(function (buffer) {
+          fetchUrl(url).then(function (buffer) {
             _this.fs.writeFileSync(url, buffer);
 
             resolve();
@@ -26386,7 +26372,7 @@ module.exports = /*#__PURE__*/function () {
 
 /***/ }),
 
-/***/ 9292:
+/***/ 5085:
 /***/ (function(__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
@@ -27228,12 +27214,11 @@ var PDFPage = /*#__PURE__*/function () {
     this.document = document;
     this.size = options.size || 'letter';
     this.layout = options.layout || 'portrait'; // process margins
-
     if (typeof options.margin === 'number') {
       this.margins = {
         top: options.margin,
         left: options.margin,
-        bottom: options.margin,
+        bottom: options.margin, // this.writer.context().pageMargins.bottom
         right: options.margin
       }; // default to 1 inch margins
     } else {
@@ -33367,11 +33352,9 @@ var PDFDocument = /*#__PURE__*/function (_stream$Readable) {
         options = this.options;
       } // end the current page if needed
 
-
       if (!this.options.bufferPages) {
         this.flushPages();
       } // create a page object
-
 
       this.page = new PDFPage(this, options);
 
@@ -63831,7 +63814,7 @@ module.exports = __webpack_require__(7187).EventEmitter;
 
 /***/ }),
 
-/***/ 1374:
+/***/ 4118:
 /***/ (function(module, exports, __webpack_require__) {
 
 var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function(a,b){if(true)!(__WEBPACK_AMD_DEFINE_ARRAY__ = [], __WEBPACK_AMD_DEFINE_FACTORY__ = (b),
